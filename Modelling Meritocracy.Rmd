@@ -1,0 +1,316 @@
+---
+title: "thesis_model_4"
+author: "Dana Jensen"
+date: "December 12, 2018"
+output: html_document
+---
+
+# ----------------- NO TAX ---------------
+
+```{r}
+# ATTENTION! RANDOM GROWTH IS NOW AN ATTRIBUTE OF ALL SIMULATIONS
+# IN ADDITION TO NTRIALS BEING 500 AND ENDOWMENT * 500
+
+nsim <- 100 # number of simulations to run
+nagents <- 100 # number of agents
+ntrials <- 500# number of trials in each sim CHANGED FROM 100
+merit_index_nt <- c() # define merit index outside sim to fill with values
+
+for (s in 1:nsim){
+  endowment <- rgamma(nagents,1,1)*500 # sampling endowment from dist
+  income <- rgamma(nagents,1,1)*10 # sampling income from dist
+  wealth_rank <- array(0,c(ntrials,nagents)) # setting up arrays
+  wealth2endowment <- array(0,c(ntrials,nagents))
+  wealth2income <- array(0,c(ntrials,nagents))
+  incomeVendowment <- array(0,c(ntrials,nagents))
+  wealth <- endowment + income # wealth is income and endowments
+  for (tt in 2:ntrials){
+    capital_growth <- wealth * ((rbeta(nagents,10,10)*2-1)/5) # sampling growth from dist
+    wealth <- wealth + income + capital_growth # add to wealth
+    wealth_rank <- rank(wealth) # wealth rank
+    wealth2endowment[tt,] <- abs(wealth_rank-rank(endowment)) # calc dif between wealth and endowment
+    wealth2income[tt,] <- abs(wealth_rank-rank(income))# and income
+    incomeVendowment[tt,] <- wealth2endowment[tt,] - wealth2income[tt,]  
+  }
+  merit_index_nt[s] <- min(which(rowMeans(incomeVendowment)>0))# get merit index
+}
+
+#plot of one sim
+plot(rowMeans(wealth2income[2:ntrials,]),
+     xlab = "Trial Number",
+     ylab = "Meritocracy Emerges",
+     main = c("No Tax"),
+     ylim = c(0,50),
+     type='l',
+     lwd=2,
+     col="seashell4",
+     axes=FALSE)
+  axis(1)
+  axis(2)
+  grid(nx = NULL, ny = NULL, col = "lightgray", lty = "dotted",
+       lwd = par("lwd"), equilogs = TRUE)
+  lines(rowMeans(wealth2endowment[2:ntrials,]),type='l',ylim=c(0,1),lwd=2,col="palegreen3")
+  legend (x = 0.01, y = 55, legend = c("Difference between income and wealth rank","Difference between endowment and wealth rank"),
+          col = c("palegreen3","seashell4"), bty = "n", lwd = 2)
+# plot merit indices
+plot(merit_index_nt,1:nsim,type='p',
+     xlab = "Trial Number",
+     ylab = "Merit Index",
+     main = "No Tax",
+     col = "palegreen3",
+     lwd=4,axes=FALSE)
+axis(1)
+axis(2)
+grid(nx = NULL, ny = NULL, col = "lightgray", lty = "dotted",
+     lwd = par("lwd"), equilogs = TRUE)
+
+# merit index from all the sims
+no_tax <- data.frame(condition="nt",value=merit_index_nt)
+
+```
+
+# -------------- PIKETTY TAX --------------
+
+```{r}
+
+nsim <- 100
+nagents <- 100
+ntrials <- 500
+tax_rates <- seq(0.04,.7,.01) # different tax rates
+
+for (s in nsim){
+  endowment <- rgamma(nagents,1,1)*500 
+  income <- rgamma(nagents,1,1)*10 
+  wealth_rank <- array(0,c(ntrials,nagents))
+  wealth2endowment <- array(0,c(ntrials,nagents))
+  wealth2income <- array(0,c(ntrials,nagents))
+  incomeVendowment <- array(0,c(ntrials,nagents))
+  wealth <- endowment + income
+  tax_rates <- seq(0.04,.7,.01)
+  merit_index_p <- array(0,length(tax_rates))
+  for (i in 2:length(tax_rates)) { # for every rate of tax
+    wealth <- endowment + income
+    for (t in 1:ntrials) {
+      tax <- wealth*tax_rates[i] # take tax
+      state <- sum(tax) # put in public pool
+      capital_growth <- wealth * ((rbeta(nagents,10,10)*2-1)/5) # growth
+      wealth <- wealth + income + capital_growth - tax + state/nagents # growth and redistribution
+      wealth_rank[t,] <- rank(wealth)
+      wealth2endowment[t,] <- abs(wealth_rank[t,]-rank(endowment))
+      wealth2income[t,] <- abs(wealth_rank[t,]-rank(income))
+      incomeVendowment[t,] <- wealth2endowment[t,] - wealth2income[t,]  
+    }
+    merit_index_p[i] <- min(which(rowMeans(incomeVendowment)>0))
+    plot(rowMeans(wealth2income[2:ntrials,]),# plot every tax rate
+     xlab = "Trial Number",
+     ylab = "Meritocracy Emerges",
+     main = c("Tax rate",paste(tax_rates[i])),
+     ylim = c(0,50),
+     type='l',
+     lwd=2,
+     col="seashell4",
+     axes=FALSE)
+    axis(1)
+    axis(2)
+    grid(nx = NULL, ny = NULL, col = "lightgray", lty = "dotted",
+         lwd = par("lwd"), equilogs = TRUE)
+    lines(rowMeans(wealth2endowment[2:ntrials,]),type='l',ylim=c(0,1),lwd=2,col="palegreen3")
+    legend (x = 0.01, y = 55, legend = c("Difference between income and wealth rank","Difference between endowment and wealth rank"),
+            col = c("palegreen3","seashell4"), bty = "n", lwd = 2)
+  }
+}
+
+# plot merit vs. tax rate 
+plot(tax_rates,merit_index_p,type='p',
+     xlab = "Tax Rate",
+     ylab = "Meritocracy Emerges",
+     col = "palegreen3",
+     lwd=4,axes=FALSE)
+axis(1)
+axis(2) 
+grid(nx = NULL, ny = NULL, col = "lightgray", lty = "dotted",
+     lwd = par("lwd"), equilogs = TRUE)
+
+piketty <- data.frame(condition="piketty",value=merit_index_p)
+
+```
+
+# ------------- VOLUNTARY TAX ------------
+
+```{r}
+
+nsim <- 100
+nagents <- 100
+ntrials <- 500
+merit_index_vt <- array(0,c(nsim))
+
+for (s in 1:nsim){
+  endowment <- rgamma(nagents,1,1)*500 
+  income <- rgamma(nagents,1,1)*10
+  wealth <- array(0,c(ntrials,nagents))
+  wealth_rank <- array(0,c(ntrials,nagents))
+  wealth2endowment <- array(0,c(ntrials,nagents))
+  wealth2income <- array(0,c(ntrials,nagents))
+  incomeVendowment <- array(0,c(ntrials,nagents))
+  wealth[1,] <- endowment + income
+  tax_rates <- array(0,c(ntrials,nagents)) 
+  tax_rate_delta <- 0.01 # here we add a delta for the tax based on growth
+  for (t in 2:ntrials) {
+    capital_growth <- wealth[t-1,] * ((rbeta(nagents,10,10)*2-1)/5)
+    tax_rates[t,capital_growth<0] <- # here is where we change the rates based on growth
+      tax_rates[t-1,capital_growth<0] - tax_rate_delta
+    tax_rates[t,capital_growth>0 & sum(capital_growth<0)] <-
+      tax_rates[t-1,capital_growth>0 & sum(capital_growth<0)] + tax_rate_delta
+    tax <- wealth[t-1,]*tax_rates[t,]
+    state <- sum(tax)
+    wealth[t,] <- wealth[t-1,] + income + capital_growth + (state/nagents) - tax
+    wealth_rank[t,] <- rank(wealth[t,])
+    wealth2endowment[t,] <- abs(wealth_rank[t,]-rank(endowment))
+    wealth2income[t,] <- abs(wealth_rank[t,]-rank(income))
+    incomeVendowment[t,] <- wealth2endowment[t,] - wealth2income[t,]  
+    merit_index_vt[s] <- min(which(rowMeans(incomeVendowment)>0))
+  }
+}
+
+vt <- data.frame(condition="vt",value=merit_index_vt)
+
+# ONE SIM ONLY
+plot(rowMeans(wealth2income[2:ntrials,]),
+     xlab = "Trial Number",
+     ylab = "Meritocracy Emerges",
+     main = "Voluntary Tax",
+     ylim = c(0,50),
+     type='l',
+     lwd=2,
+     col="seashell4",
+     axes=FALSE)
+axis(1)
+axis(2)
+grid(nx = NULL, ny = NULL, col = "lightgray", lty = "dotted",
+     lwd = par("lwd"), equilogs = TRUE)
+lines(rowMeans(wealth2endowment[2:ntrials,]),type='l',ylim=c(0,1),lwd=2,col="palegreen3")
+legend (x = 0.0001, y = 55, legend = c("Difference between income and wealth rank","Difference between endowment and wealth rank"),
+        col = c("palegreen3","seashell4"), bty = "n", lwd = 2)
+
+#Scatter of all merit indexes
+plot(merit_index_vt,1:nsim,type='p',
+     xlab = "Trial Number",
+     ylab = "Merit Index",
+     main = "Voluntary Tax",
+     col = "palegreen3",
+     lwd=4,axes=FALSE)
+axis(1)
+axis(2)
+grid(nx = NULL, ny = NULL, col = "lightgray", lty = "dotted",
+     lwd = par("lwd"), equilogs = TRUE)
+
+```
+
+# -------------- NUDGE 1 ----------------
+
+```{r}
+
+nsim <- 100
+nagents <- 100
+ntrials <- 500
+merit_index_n1 <- array(0,c(nsim))
+
+for (s in 1:nsim){
+  endowment <- rgamma(nagents,1,1)*500 
+  income <- rgamma(nagents,1,1)*10 
+  wealth_rank <- array(0,c(ntrials,nagents))
+  wealth2endowment <- array(0,c(ntrials,nagents))
+  wealth2income <- array(0,c(ntrials,nagents))
+  wealth <- array(0,c(ntrials,nagents)) 
+  tax_rates <- array(0,c(ntrials,nagents)) 
+  incomeVendowment <- array(0,c(ntrials,nagents))
+  wealth[1,] <- endowment + income
+  tax_rate_delta <- .01
+  group <- as.matrix(sample(30, nagents, replace = T))
+  for (t in 2:ntrials){
+    capital_growth <- wealth[t-1,] * ((rbeta(nagents,10,10)*2-1)/5)
+    wealth_rank[t,] <- rank(wealth[t,])
+    tax_rates[t,capital_growth<0] <-
+      tax_rates[t-1,capital_growth<0] - tax_rate_delta
+    tax_rates[t,capital_growth>0 & sum(capital_growth<0)] <-
+      tax_rates[t-1,capital_growth>0 & sum(capital_growth<0)] + tax_rate_delta
+    for (i in 1:nagents){ # also change the tax based on if group members are in poverty
+      q = i + 1
+      if (q %in% 1:nagents == FALSE){
+            break
+          }# if agents are in same group and one is fine while the other is doing badly
+      if ((group[i,] == group[q,])&&((wealth_rank[t-1, i]>20) && (wealth_rank[t-1, q]<=20))){
+        tax_rates[t,i] <- tax_rates[t-1,i] + tax_rate_delta #make the fine agent give more
+        }else{
+          q = q + 1
+        }
+    }
+    tax <- wealth[t-1,] * tax_rates[t,]
+    state <- sum(tax)
+    wealth[t,] <- wealth[t-1,] + income + capital_growth + (state/nagents) - tax
+    wealth_rank[t,] <- rank(wealth[t,])
+    wealth2endowment[t,] <- abs(wealth_rank[t,]-rank(endowment))
+    wealth2income[t,] <- abs(wealth_rank[t,]-rank(income))
+    incomeVendowment[t,] <- wealth2endowment[t,] - wealth2income[t,]
+    merit_index_n1[s] <- min(which(rowMeans(incomeVendowment)>0))
+  }
+}
+
+nudge1 <- data.frame(condition="n1",value=merit_index_n1)
+
+# ONE SIM ONLY
+plot(rowMeans(wealth2income[2:ntrials,]),
+     xlab = "Trial Number",
+     ylab = "Meritocracy Emerges",
+     main = "Identifiable Victim Effect",
+     ylim = c(0,50),
+     type='l',
+     lwd=2,
+     col="seashell4",
+     axes=FALSE)
+axis(1)
+axis(2)
+grid(nx = NULL, ny = NULL, col = "lightgray", lty = "dotted",
+     lwd = par("lwd"), equilogs = TRUE)
+lines(rowMeans(wealth2endowment[2:ntrials,]),type='l',ylim=c(0,1),lwd=2,col="palegreen3")
+legend (x = 0.001, y = 55, legend = c("Difference between income and wealth rank","Difference between endowment and wealth rank"),
+        col = c("palegreen3","seashell4"), bty = "n", lwd = 2)
+
+# scatter plot
+plot(merit_index_n1,1:nsim,type='p',
+     xlab = "Trial Number",
+     ylab = "Merit Index",
+     main = "Identifiable Victim Effect",
+     col = "palegreen3",
+     lwd=4,axes=FALSE)
+axis(1)
+axis(2)
+grid(nx = NULL, ny = NULL, col = "lightgray", lty = "dotted",
+     lwd = par("lwd"), equilogs = TRUE)
+
+```
+
+#------------ ANALYSIS -------------
+
+```{r}
+
+# short format
+df <- cbind(no_tax, vt, piketty, nudge1)#, nudge2)
+
+# unequal lengths so add NAs
+# piketty1 <- data.frame(condition=rep(NA,33),value=rep(NA, 33))
+# piketty<-merge(piketty1, piketty,all=TRUE)
+
+# long format
+df<- merge(no_tax,vt, by.x = c("condition","value"), all = T)
+df<- merge(df,piketty, by.x = c("condition","value"), all = T)
+df<- merge(df,nudge1, by.x = c("condition","value"), all = T)
+#df<- merge(df,nudge2, by.x = c("condition","value"), all = T)
+
+#infs
+is.na(df) <- sapply(df, is.infinite)
+
+# to repeat analysis
+write.csv(df, file = "Merit_Indices",row.names = F)
+
+```
