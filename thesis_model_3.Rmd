@@ -1,0 +1,251 @@
+---
+title: "thesis_model_3"
+author: "Dana Jensen"
+date: "December 7, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+# IDEAS FOR RULES:
+# taxation is as percentage of income
+# risk of death is a function of wealth
+# reproduction is a function of wealth
+# wealth splits at reproduction
+# idea - consumption is a proportion of wealth paid to reduce the risk of death at individual level,
+# tax is the proportion paid to reduce the risk of death at group level
+# Question to build on: what are the baseline effects of meritocracy?
+
+
+#-----------------VARIABLES---------------
+
+
+# Let's have 100 agents in our simulation
+nagents <- 100
+
+# Now let's start by defining income as merit based, and endowment as non-merit based.
+# First we sample endowment from a gamma distribution, and multiply by a factor of 100.
+# This is what the agents inherit
+endowment <- rgamma(nagents,1,1)*500 #endowment is gamma distributed
+
+#NB I increased the endowment, give the model more to overcome, so we get a nicer taxation curve
+# Now lets sample income from a seperate gamma distribution, with the same parameters,
+# and multiply by a factor of 10. This is what agents "earn" each year. This is reward for merit.
+income <- rgamma(nagents,1,1)*10 #income is stable and gamma distributed across agents
+
+# If we define Wealth at period 1 as endowment + income, and at each subsequent period as wealth + income
+# we can ask how long it takes for income inequality to trump wealth inequality
+# Let's simulate 100 trials
+ntrials <- 100
+
+# As an outcome, let's rank agents by their current wealth.
+# We are interested in how agents rankings for wealth each period relate to
+
+# 1) their endowment
+# 2) their income
+# let's set up some empty arrays to track that in the simulation
+wealth_rank <- array(0,c(ntrials,nagents))
+wealth2endowment <- array(0,c(ntrials,nagents))
+wealth2income <- array(0,c(ntrials,nagents))
+wealth <- array(0,c(ntrials,nagents)) #.. and this is just current wealth on a trial
+
+# we'll also include variable growth rates for individual agents
+growth_rates <- array(0,c(ntrials,nagents))
+
+# and also variable tax rates across based on learning
+tax_rates <- array(0,c(ntrials,nagents)) # and tax rates
+
+# from this we can define an array called incomeVendowment, which is the difference beteween these two distances
+# we need an empty array for this
+incomeVendowment <- array(0,c(ntrials,nagents))
+
+# we can use this array to identify when the distance between income and wealth ranking
+# becomes shorter than the distance between endowment and wealth ranking
+# the earlier this happens, the more meritocratic the society
+# we need an empty array for this, and will make it below
+# but the goal of any policy should be to minimise this index
+# just define wealth as a variable at the outset
+wealth[1,] <- endowment + income
+# now let's run the simulation as a loop where we update wealth by income
+# KILLED OFF###
+
+# ADDITIONS HERE
+#NB Here we add another loop, where we run different taxation rates to get a taxation curve
+# but first we specify the taxation rates we want to run over
+#tax_rates <- seq(0.01,.7,.01)
+
+# now let's define our merit index as an empty array the same size as tax_rates,
+# so we can track the index across taxation levels
+merit_index <- array(0,length(tax_rates))
+growth_rate <- 0
+
+# for this learning model, let's also set the level of tax rate change, based on adaptation.
+# let's just set this at something now and do sensitivity analysis
+# prospect/value theory
+# This is where the nudge occurs
+tax_rate_delta <- .01
+
+#dana: make this a function of something? (of growth?)
+#dana: we can also make this a list of distributions, and depending on the growth we can select which distribution we sample from, or have one distributions of which the parameters are dependant on the nudge. Makes it a bit more noisy (even though it would be out-of-character of a rational agent perhaps? Also no idea if this represents real cognitive processing so I don't know if it makes sense)
+#dana: some people will not contribute no matter what (freeriders), do we include this?
+# the nudge will have to influence the distribution/function/delta/whatever to have a positive skew (after the nudge, people should contribute more)
+
+
+#-----------------------NUDGES--------------------
+
+
+# -- POSSIBLE NUDGE 1 --
+# FRAMING (N.B. I really don't know how I would model these...)
+  # Framing effect: 	Drawing different conclusions from the same information, depending on   how that information is presented
+  # Illusion of control:  The tendency to overestimate one's degree of influence over other   external events
+  # Money illusion: 	The tendency to concentrate on the nominal value (face value) of money   rather than its value in terms of purchasing power
+  # Weber–Fechner law: 	Difficulty in comparing small differences in large                    quantities. 
+       #--->instead of tax being annual, make it monthly? aka more iterations over the same           timespand?
+tax_rate_delta <- 0.1
+
+
+# -- POSSIBLE NUDGE 2 --
+# Hyperbolic discounting: 	Discounting is the tendency for people to have a stronger preference for more immediate payoffs relative to later payoffs. Hyperbolic discounting leads to choices that are inconsistent over time – people make choices today that their future selves would prefer not to have made, despite using the same reasoning
+  # ---> make a way for agents to think long-term 
+tax_rate_delta <- 0.1
+
+
+# -- POSSIBLE NUDGE 3 --
+# Identifiable victim effect: 	The tendency to respond more strongly to a single identified person at risk than to a large group of people at risk
+# goes along with (Thomas Sowell?) localisation of taxes
+tax_rate_delta <- 0.1
+
+#PSEUDO-CODE!
+# have a classification criteria for poverty (based on wealth rank)
+poverty <- array(0,c(ntrials,nagents)) # make a separate array for poverty 'rank'
+if (wealth_rank<20){ #this is arbitrary for now, look up what others say is poverty
+  poverty <- TRUE # we say the agent is in poverty 
+ }else{
+    poverty <- FALSE #otherwise, they are fine
+}
+# at the beginning, randomly define agents to be in groups (ranging from 1 to 5 members)
+# I need a list(?) of x number of groups ranging from 1-5 members with totals sum of nagents
+group <- rep(seq(1:5),20) #these numbers are not realistic but will do for now
+
+# MORE PSEUDO-CODE!
+# if a member in their group is in poverty, tax_rate_delta increases (by x depending on wealth rank of poverty member?) for other group members
+for (i in 1:nagents){ #loop over agents
+  # find groups members
+  # ?find, ?match
+  # need to compare agent group num against one another?
+  if ((agent_group_num == agent_group_num) & (poverty == FALSE)){ #only agents who are not in poverty
+  # increase delta
+    tax_rate_delta4 = tax_rate_delta * 1.5 # we can also add a probability that the delta changes, do make it more 'realistic'?
+  }
+  # until no group members are in poverty
+  # then change it back to normal
+}
+
+
+# -- POSSIBLE NUDGE 4 --
+# Social Proofing
+  # document a relationship between wealth rank and contribution. 
+contribution_rank <- array(0,c(ntrials,nagents))
+# this is for in the simulation loop but I just put it here for now
+contribution_rank[t,] <- rank(contribution[t,])
+  # Make known to the agents, they will be aware of where they rank
+  # We can say that for agents who rank lowest on this ledger, they have a function that      will motivate them to not be on the bottom, and therefore contribute more than last round
+
+#PSEUDO-CODE
+# define delta outside loop 
+tax_rate_delta = 0.5
+# initiate nudge
+if (contribution_rank < "certain % of ranks"){ # would be nice to make this a gradient so the lower they are then the more they contribute etc.
+  tax_rate_delta = tax_rate_delta * 1.5 # we can also add a probability that the delta changes, do make it more 'realistic'?
+}else{
+  tax_rate_delta = tax_rate_delta
+}
+# Will sometimes be in conflict with captial_growth function (growth will make them         contribute less but rank will make them contribute more)
+
+
+#-----------------SIMULATION--------------------
+
+
+#idea - vary growth rates for different subs (including state)
+#for (i in 1:length(tax_rates)) {
+# just define wealth as a variable at the outset OF EACH LOOP
+wealth[1,] <- endowment + income
+    for (t in 2:ntrials) {
+    #let's also add some growth from capital - added since model1
+    # Here, this is growth added to each agent's wealth at the start of each period
+    #lets make this growth a bit noisy, and individualise it to agents
+    #and let's let it be negative
+    capital_growth <- wealth[t-1,] * ((rbeta(nagents,10,10)*2-1)/5)#beta above zero, nicer      distribution. This is the 'luck' element of growth
+    
+    # HERE IS THE SECTION ON VOLUNTARY TAX
+    # update each individuals tax rate accroding to a rule
+    # the rule is that
+    # 1) voluntary tax rate is reduced whenever there is negative personal growth
+    tax_rates[t,capital_growth<0] <-
+      tax_rates[t-1,capital_growth<0]-tax_rate_delta
+    # 2) voluntary tax rate is INCREASED whenever there is positive personal growth,
+    #    and also negative collective growth
+    tax_rates[t,capital_growth>0 & sum(capital_growth<0)] <-
+      tax_rates[t-1,capital_growth>0 & sum(capital_growth<0)]+tax_rate_delta
+    # 3) voluntary tax rate stays the same if both personal and collective growth are           positive
+    # take a tax from each agent   
+    tax <- wealth[t-1,]*tax_rates[t,]
+    # and put it into a state pool
+    state <- sum(tax)
+    # now let's update wealth after income, growth, and tax redistribution
+    wealth[t,] <- wealth[t-1,] + income + capital_growth - tax + state/nagents
+    
+    # we are not interested in wealth per se
+    # we are interested in how agents are ranked in terms of wealth, relative to their          endowment and incomes.
+    # In terms of the simulation, when the difference between agents' rank in terms of          current wealth and their rank
+    # in terms of income, is less than the difference between their rank in terms of current     wealth and their rank
+    # in terms of endowment, we will have meritocracy
+    # (In other words when when income matters more than endowment for relative wealth, we      will have meritocracy)
+    # so let's measure those things and fill up our arrays
+    wealth_rank[t,] <- rank(wealth[t,])
+    wealth2endowment[t,] <- abs(wealth_rank[t,]-rank(endowment))
+    wealth2income[t,] <- abs(wealth_rank[t,]-rank(income))
+    #now let's calculate the difference between the two distances for each agent
+    incomeVendowment[t,] <- wealth2endowment[t,] - wealth2income[t,]  
+  }
+
+#Let us define the "society" as more meritocratic when the average of this index (across agents) reaches 0 earlier
+merit_index <- min(which(rowMeans(incomeVendowment)>0))
+
+
+#--------------PLOT--------------------
+
+
+#print(merit_index)
+#}
+#print(merit_index)
+#plot(tax_rates,merit_index,type='l',
+#    xlab = "Tax Rate",
+#    ylab = "Meritocracy Emerges",
+#    lwd=4,axes=FALSE)
+#axis(1)
+#axis(2)
+
+# Note that this number is just the crossing point on the figure. Now that we have this index, if it is reasonable,
+# we have one number we can use to compare different models (social designs) in terms of their meritocracy.
+#lets have a quick look. Let's plot the mean (wealth-income) difference and the mean (wealth-endowment) distance
+#across periods
+
+plot(rowMeans(wealth2income[2:ntrials,]),
+     xlab = "Trial Number",
+     ylab = " ",
+     ylim = c(0,45),
+     type='l',
+     lwd=4,
+     col="blue",
+     axes=FALSE)
+axis(1)
+axis(2)
+lines(rowMeans(wealth2endowment[2:ntrials,]),type='l',ylim=c(0,1),lwd=4,col="red")
+legend (x = 10, y = 45, legend = c("Difference between wealth and income rankings",
+                   "Difference between wealth and endowment rankings"),
+        col = c("blue","red"), bty = "n", lwd = 4)
+
+# what does this tell you? When do we see meritocracy emerge? How do you know? Can we build on this?
+
+```
